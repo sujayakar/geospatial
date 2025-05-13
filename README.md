@@ -9,7 +9,7 @@
 This component adds a geospatial index to Convex, allowing you to efficiently store and query points on the Earth's surface.
 
 - Insert points into the geospatial key value store along with their geographic coordinates.
-- Efficiently query for all points within a given rectangle on the sphere.
+- Efficiently query for all points within a given rectangle or polygon on the sphere.
 - Control the sort order for the results with a custom sorting key.
 - Filter query results with equality and `IN` clauses.
 - And since it's built on Convex, everything is automatically consistent, reactive, and cached!
@@ -108,20 +108,26 @@ After inserting some points, you can query them with the `query` API.
 ```ts
 // convex/index.ts
 
-const example = query({
-  handler: async (ctx) => {
-    const rectangle = {
-      west: -73.9712,
-      south: 40.7831,
-      east: -72.9712,
-      north: 41.7831,
-    };
-    const result = await geospatial.query(ctx, {
-      shape: { type: "rectangle", rectangle },
-      limit: 16,
-    });
-    return result;
-  },
+const rectangle = {
+  west: -73.9712,
+  south: 40.7831,
+  east: -72.9712,
+  north: 41.7831,
+};
+const result = await geospatial.query(ctx, {
+  shape: { type: "rectangle", rectangle },
+  limit: 16,
+});
+
+// Or query by an arbitrary polygonal loop.
+const polygon = [
+  { latitude: 40.7, longitude: -73.99 },
+  { latitude: 40.75, longitude: -73.95 },
+  { latitude: 40.8, longitude: -74.0 },
+];
+const polyResult = await geospatial.query(ctx, {
+  shape: { type: "polygon", polygon },
+  limit: 16,
 });
 ```
 

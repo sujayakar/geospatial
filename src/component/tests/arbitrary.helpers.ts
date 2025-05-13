@@ -19,3 +19,42 @@ export const arbitraryDocuments = fc.array(arbitraryDocument, {
   minLength: 1,
   maxLength: 4,
 });
+
+export const arbitraryRectanglePolygon = fc
+  .tuple(
+    fc.float({ min: -80, max: 80, noNaN: true }),
+    fc.float({ min: -170, max: 170, noNaN: true }),
+    fc.float({ min: -80, max: 80, noNaN: true }),
+    fc.float({ min: -170, max: 170, noNaN: true }),
+  )
+  .map(([lat1, lon1, lat2, lon2]) => {
+    let south = Math.min(lat1, lat2);
+    let north = Math.max(lat1, lat2);
+    let west = Math.min(lon1, lon2);
+    let east = Math.max(lon1, lon2);
+
+    // Ensure the rectangle has a reasonable area (≥0.05° in each dimension)
+    if (north - south < 0.05) {
+      north = south + 0.05;
+    }
+    if (east - west < 0.05) {
+      east = west + 0.05;
+    }
+
+    // Avoid polygons that span the anti-meridian to keep tests simple.
+    if (east - west > 120) {
+      east = west + 120;
+    }
+
+    return [
+      { latitude: south, longitude: west },
+      { latitude: south, longitude: east },
+      { latitude: north, longitude: east },
+      { latitude: north, longitude: west },
+    ];
+  });
+
+export const arbitraryPolygons = fc.array(arbitraryRectanglePolygon, {
+  minLength: 1,
+  maxLength: 4,
+});
