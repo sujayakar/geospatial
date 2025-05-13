@@ -1,4 +1,4 @@
-import type { Rectangle } from "../component/types.js";
+import type { Rectangle, Point } from "../component/types.js";
 import { GeospatialDocument, FilterValue, FilterObject } from "./index.js";
 
 /**
@@ -149,4 +149,6 @@ export class FilterBuilderImpl<Doc extends GeospatialDocument> {
   }
 }
 
-export type QueryShape = { type: "rectangle"; rectangle: Rectangle };
+export type QueryShape =
+  | { type: "rectangle"; rectangle: Rectangle }
+  | { type: "polygon"; polygon: Point[] };

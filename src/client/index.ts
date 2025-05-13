@@ -5,14 +5,18 @@ import {
   OptionalRestArgs,
 } from "convex/server";
 import { GenericId } from "convex/values";
+import type {
+  Point,
+  Primitive,
+  Rectangle,
+} from "../component/types.js";
 import type { api } from "../component/_generated/api.js";
-import type { Point, Primitive, Rectangle } from "../component/types.js";
-import { point, rectangle } from "../component/types.js";
+import { point, rectangle, polygon } from "../component/types.js";
 import { LogLevel } from "../component/lib/logging.js";
 import { FilterBuilderImpl, GeospatialQuery } from "./query.js";
 
 export type { Point, Primitive, GeospatialQuery, Rectangle };
-export { point, rectangle };
+export { point, rectangle, polygon };
 
 declare global {
   const Convex: Record<string, unknown>;
@@ -187,7 +191,10 @@ export class GeospatialIndex<
     }
     const resp = await ctx.runQuery(this.component.query.execute, {
       query: {
-        rectangle: query.shape.rectangle,
+        rectangle:
+          query.shape.type === "rectangle" ? query.shape.rectangle : undefined,
+        polygon:
+          query.shape.type === "polygon" ? query.shape.polygon : undefined,
         filtering: filterBuilder.filterConditions,
         sorting: { interval: filterBuilder.interval ?? {} },
         maxResults: query.limit ?? 64,

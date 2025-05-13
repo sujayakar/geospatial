@@ -1,5 +1,5 @@
 import { Infer, v } from "convex/values";
-import { Point, point, primitive, rectangle } from "./types.js";
+import { Point, point, primitive, rectangle, polygon } from "./types.js";
 import { query } from "./_generated/server.js";
 import { PointSet, Stats } from "./streams/zigzag.js";
 import { Intersection } from "./streams/intersection.js";
@@ -13,6 +13,7 @@ import { Doc } from "./_generated/dataModel.js";
 import { createLogger, logLevel } from "./lib/logging.js";
 import { S2Bindings } from "./lib/s2Bindings.js";
 import { ClosestPointQuery } from "./lib/pointQuery.js";
+import { boundingRectangle, pointInPolygon } from "./lib/polygon.js";
 
 export const PREFETCH_SIZE = 16;
 
@@ -23,7 +24,8 @@ const equalityCondition = v.object({
 });
 
 const geospatialQuery = v.object({
-  rectangle,
+  rectangle: v.optional(rectangle),
+  polygon: v.optional(polygon),
   filtering: v.array(equalityCondition),
   sorting: v.object({
     // TODO: Support reverse order.
@@ -113,10 +115,17 @@ export const execute = query({
         return { results: [] } as ExecuteResult;
       }
     }
-    const { rectangle } = args.query;
+    const shapeRectangle =
+      args.query.rectangle ??
+      (args.query.polygon ? boundingRectangle(args.query.polygon) : undefined);
+
+    if (!shapeRectangle) {
+      throw new Error("Query must supply either `rectangle` or `polygon`.");
+    }
+
     const cells = s2
       .coverRectangle(
-        rectangle,
+        shapeRectangle,
         args.minLevel,
         args.maxLevel,
         args.levelMod,
@@ -222,7 +231,19 @@ export const execute = query({
             throw new Error("Internal error: document not found");
           }
 
-          const contains = s2.rectangleContains(rectangle, doc.coordinates);
+          let contains: boolean;
+          if (args.query.rectangle) {
+            contains = s2.rectangleContains(
+              args.query.rectangle,
+              doc.coordinates,
+            );
+          } else if (args.query.polygon) {
+            contains = pointInPolygon(doc.coordinates, args.query.polygon);
+          } else {
+            // Should not happen due to earlier validation
+            contains = false;
+          }
+
           if (!contains) {
             stats.rowsPostFiltered++;
             continue;

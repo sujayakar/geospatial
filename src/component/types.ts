@@ -31,3 +31,7 @@ export type Rectangle = Infer<typeof rectangle>;
 
 export type Meters = number;
 export type ChordAngle = number;
+
+// Add polygon support
+export const polygon = v.array(point);
+export type Polygon = Infer<typeof polygon>;
