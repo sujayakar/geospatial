@@ -60,6 +60,34 @@ export const arbitraryConvexPolygon = fc
           const angleB = Math.atan2(b.latitude - centroid.lat, b.longitude - centroid.lng);
           return angleA - angleB;
         });
-        return points;
+        // Remove consecutive duplicate vertices
+        const unique = points.filter((p, idx, arr) => {
+          if (idx === 0) return true;
+          const prev = arr[idx - 1];
+          return (
+            Math.abs(p.latitude - prev.latitude) > 1e-6 ||
+            Math.abs(p.longitude - prev.longitude) > 1e-6
+          );
+        });
+        // Ensure at least 3 unique points
+        if (unique.length < 3) {
+          // fallback to rectangle corner points around centre
+          return [
+            { latitude: centerLat - 0.01, longitude: centerLng - 0.01 },
+            { latitude: centerLat - 0.01, longitude: centerLng + 0.01 },
+            { latitude: centerLat + 0.01, longitude: centerLng + 0.01 },
+          ];
+        }
+        return unique;
+      })
+      .filter((poly) => {
+        // Shoelace area calculation
+        let area = 0;
+        for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+          area +=
+            (poly[j].longitude + poly[i].longitude) *
+            (poly[j].latitude - poly[i].latitude);
+        }
+        return Math.abs(area) > 1e-6;
       });
   });
