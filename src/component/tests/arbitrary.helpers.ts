@@ -58,3 +58,47 @@ export const arbitraryPolygons = fc.array(arbitraryRectanglePolygon, {
   minLength: 1,
   maxLength: 4,
 });
+
+// Generate random convex polygon with 3-8 vertices around random center
+export const arbitraryConvexPolygon = fc
+  .tuple(
+    fc.float({ min: -80, max: 80, noNaN: true }),
+    fc.float({ min: -170, max: 170, noNaN: true }),
+  )
+  .chain(([centerLat, centerLng]) => {
+    const radiusLat = 0.5;
+    const radiusLng = 0.5;
+    return fc
+      .array(
+        fc.tuple(
+          fc.float({ min: -radiusLat, max: radiusLat, noNaN: true }),
+          fc.float({ min: -radiusLng, max: radiusLng, noNaN: true }),
+        ),
+        { minLength: 3, maxLength: 8 },
+      )
+      .map((deltas) => {
+        // Shift deltas to absolute coords
+        const points = deltas.map(([dLat, dLng]) => ({
+          latitude: centerLat + dLat,
+          longitude: centerLng + dLng,
+        }));
+        // Compute centroid
+        const centroid = points.reduce(
+          (acc, p) => {
+            acc.lat += p.latitude;
+            acc.lng += p.longitude;
+            return acc;
+          },
+          { lat: 0, lng: 0 },
+        );
+        centroid.lat /= points.length;
+        centroid.lng /= points.length;
+        // Sort points by angle to centroid to ensure CCW order
+        points.sort((a, b) => {
+          const angleA = Math.atan2(a.latitude - centroid.lat, a.longitude - centroid.lng);
+          const angleB = Math.atan2(b.latitude - centroid.lat, b.longitude - centroid.lng);
+          return angleA - angleB;
+        });
+        return points;
+      });
+  });

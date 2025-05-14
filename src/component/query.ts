@@ -1,5 +1,5 @@
 import { Infer, v } from "convex/values";
-import { point, primitive, rectangle, polygon } from "./types.js";
+import { Point, point, primitive, rectangle, polygon } from "./types.js";
 import { query } from "./_generated/server.js";
 import { PointSet, Stats } from "./streams/zigzag.js";
 import { Intersection } from "./streams/intersection.js";
@@ -117,25 +117,24 @@ export const execute = query({
         return { results: [] } as ExecuteResult;
       }
     }
+    const shape = args.query.shape;
     let cellIDs: bigint[];
-    if (args.query.rectangle) {
+    if (shape.type === "rectangle") {
       cellIDs = s2.coverRectangle(
-        args.query.rectangle,
-        args.minLevel,
-        args.maxLevel,
-        args.levelMod,
-        args.maxCells,
-      );
-    } else if (args.query.polygon) {
-      cellIDs = s2.coverPolygon(
-        args.query.polygon,
+        shape.rectangle,
         args.minLevel,
         args.maxLevel,
         args.levelMod,
         args.maxCells,
       );
     } else {
-      throw new Error("Query must supply either `rectangle` or `polygon`.");
+      cellIDs = s2.coverPolygon(
+        shape.polygon,
+        args.minLevel,
+        args.maxLevel,
+        args.levelMod,
+        args.maxCells,
+      );
     }
 
     const cells = cellIDs.map((cellID) => s2.cellIDToken(cellID));
@@ -239,16 +238,13 @@ export const execute = query({
           }
 
           let contains: boolean;
-          if (args.query.rectangle) {
+          if (shape.type === "rectangle") {
             contains = s2.rectangleContains(
-              args.query.rectangle,
+              shape.rectangle,
               doc.coordinates,
             );
-          } else if (args.query.polygon) {
-            contains = pointInPolygon(doc.coordinates, args.query.polygon);
           } else {
-            // Should not happen due to earlier validation
-            contains = false;
+            contains = pointInPolygon(doc.coordinates, shape.polygon);
           }
 
           if (!contains) {

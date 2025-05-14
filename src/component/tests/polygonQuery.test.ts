@@ -7,7 +7,7 @@ import { modules } from "../test.setup.js";
 import { api } from "../_generated/api.js";
 import {
   arbitraryDocuments,
-  arbitraryRectanglePolygon,
+  arbitraryConvexPolygon,
 } from "./arbitrary.helpers.js";
 import { pointInPolygon } from "../lib/polygon.js";
 
@@ -50,7 +50,7 @@ test("polygon query - basic functionality", async () => {
 
   const result = await t.query(api.query.execute, {
     query: {
-      polygon,
+      shape: { type: "polygon", polygon },
       filtering: [],
       sorting: { interval: {} },
       maxResults: 64,
@@ -65,7 +65,7 @@ test("polygon query - basic functionality", async () => {
 
 // Property-based test
 
-fcTest.prop({ documents: arbitraryDocuments, polygon: arbitraryRectanglePolygon })(
+fcTest.prop({ documents: arbitraryDocuments, polygon: arbitraryConvexPolygon })(
   "polygon query - property based testing",
   async ({ documents, polygon }) => {
     const t = convexTest(schema, modules);
@@ -78,7 +78,7 @@ fcTest.prop({ documents: arbitraryDocuments, polygon: arbitraryRectanglePolygon 
     // Execute query
     const result = await t.query(api.query.execute, {
       query: {
-        polygon,
+        shape: { type: "polygon", polygon },
         filtering: [],
         sorting: { interval: {} },
         maxResults: 128,

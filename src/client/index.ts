@@ -191,10 +191,7 @@ export class GeospatialIndex<
     }
     const resp = await ctx.runQuery(this.component.query.execute, {
       query: {
-        rectangle:
-          query.shape.type === "rectangle" ? query.shape.rectangle : undefined,
-        polygon:
-          query.shape.type === "polygon" ? query.shape.polygon : undefined,
+        shape: query.shape,
         filtering: filterBuilder.filterConditions,
         sorting: { interval: filterBuilder.interval ?? {} },
         maxResults: query.limit ?? 64,
