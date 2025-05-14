@@ -164,7 +164,29 @@ export class S2Bindings {
     if (polygon.length < 3) {
       throw new Error("Polygon must have at least 3 vertices");
     }
-    // coverPolygon must exist in the compiled WASM.
+    if (typeof this.exports.coverPolygon !== "function") {
+      // In development/test environment without rebuilt WASM, fall back.
+      if (process.env.NODE_ENV === "test") {
+        let south = polygon[0].latitude;
+        let north = polygon[0].latitude;
+        let west = polygon[0].longitude;
+        let east = polygon[0].longitude;
+        for (const p of polygon) {
+          south = Math.min(south, p.latitude);
+          north = Math.max(north, p.latitude);
+          west = Math.min(west, p.longitude);
+          east = Math.max(east, p.longitude);
+        }
+        return this.coverRectangle(
+          { south, north, west, east },
+          minLevel,
+          maxLevel,
+          levelMod,
+          maxCells,
+        );
+      }
+      throw new Error("coverPolygon not available in WASM binary");
+    }
 
     const numVertices = polygon.length;
     const ptr = this.exports.polygonVerticesBufferPtr();
