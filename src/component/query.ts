@@ -1,5 +1,5 @@
 import { Infer, v } from "convex/values";
-import { Point, point, primitive, rectangle, polygon } from "./types.js";
+import { point, primitive, rectangle, polygon } from "./types.js";
 import { query } from "./_generated/server.js";
 import { PointSet, Stats } from "./streams/zigzag.js";
 import { Intersection } from "./streams/intersection.js";
@@ -23,13 +23,15 @@ const equalityCondition = v.object({
   filterValue: primitive,
 });
 
+const shape = v.union(
+  v.object({ type: v.literal("rectangle"), rectangle }),
+  v.object({ type: v.literal("polygon"), polygon }),
+);
+
 const geospatialQuery = v.object({
-  rectangle: v.optional(rectangle),
-  polygon: v.optional(polygon),
+  shape,
   filtering: v.array(equalityCondition),
   sorting: v.object({
-    // TODO: Support reverse order.
-    // order: v.union(v.literal("asc"), v.literal("desc")),
     interval,
   }),
   maxResults: v.number(),
