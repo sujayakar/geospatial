@@ -13,7 +13,7 @@ import { Doc } from "./_generated/dataModel.js";
 import { createLogger, logLevel } from "./lib/logging.js";
 import { S2Bindings } from "./lib/s2Bindings.js";
 import { ClosestPointQuery } from "./lib/pointQuery.js";
-import { boundingRectangle, pointInPolygon } from "./lib/polygon.js";
+import { pointInPolygon } from "./lib/polygon.js";
 
 export const PREFETCH_SIZE = 16;
 
@@ -115,23 +115,28 @@ export const execute = query({
         return { results: [] } as ExecuteResult;
       }
     }
-    const shapeRectangle =
-      args.query.rectangle ??
-      (args.query.polygon ? boundingRectangle(args.query.polygon) : undefined);
-
-    if (!shapeRectangle) {
-      throw new Error("Query must supply either `rectangle` or `polygon`.");
-    }
-
-    const cells = s2
-      .coverRectangle(
-        shapeRectangle,
+    let cellIDs: bigint[];
+    if (args.query.rectangle) {
+      cellIDs = s2.coverRectangle(
+        args.query.rectangle,
         args.minLevel,
         args.maxLevel,
         args.levelMod,
         args.maxCells,
-      )
-      .map((cellID) => s2.cellIDToken(cellID));
+      );
+    } else if (args.query.polygon) {
+      cellIDs = s2.coverPolygon(
+        args.query.polygon,
+        args.minLevel,
+        args.maxLevel,
+        args.levelMod,
+        args.maxCells,
+      );
+    } else {
+      throw new Error("Query must supply either `rectangle` or `polygon`.");
+    }
+
+    const cells = cellIDs.map((cellID) => s2.cellIDToken(cellID));
     logger.debug("S2 cells", args, cells);
 
     const stats: Stats = {

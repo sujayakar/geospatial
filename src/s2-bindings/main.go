@@ -54,6 +54,54 @@ func coverRectangleBufferPtr() *[COVER_RECTANGLE_BUFFER_SIZE]uint64 {
 	return &coverRectangleBuffer
 }
 
+// Buffer for passing polygon vertices (lat,lng pairs as float64)
+const POLYGON_VERTICES_BUFFER_SIZE int = 2048 // supports up to 1024 vertices
+
+var polygonVerticesBuffer [POLYGON_VERTICES_BUFFER_SIZE]float64
+
+//export polygonVerticesBufferPtr
+func polygonVerticesBufferPtr() *[POLYGON_VERTICES_BUFFER_SIZE]float64 {
+	return &polygonVerticesBuffer
+}
+
+//export coverPolygon
+func coverPolygon(numVertices int, minLevel int, maxLevel int, levelMod int, maxCells int) int {
+	if numVertices*2 > POLYGON_VERTICES_BUFFER_SIZE {
+		return -1
+	}
+	if numVertices < 3 {
+		return -1 // Not a polygon
+	}
+
+	pts := make([]s2.Point, 0, numVertices)
+	for i := 0; i < numVertices; i++ {
+		lat := polygonVerticesBuffer[i*2]
+		lng := polygonVerticesBuffer[i*2+1]
+		pts = append(pts, s2.PointFromLatLng(s2.LatLngFromDegrees(lat, lng)))
+	}
+
+	loop := s2.LoopFromPoints(pts)
+	if !loop.IsNormalized() {
+		loop.Invert()
+	}
+	poly := s2.PolygonFromLoops([]*s2.Loop{loop})
+
+	rc := s2.RegionCoverer{
+		MinLevel: minLevel,
+		MaxLevel: maxLevel,
+		MaxCells: maxCells,
+		LevelMod: levelMod,
+	}
+	covering := rc.Covering(poly)
+	if len(covering) > COVER_RECTANGLE_BUFFER_SIZE {
+		return -1
+	}
+	for i, cellID := range covering {
+		coverRectangleBuffer[i] = uint64(cellID)
+	}
+	return len(covering)
+}
+
 //export coverRectangle
 func coverRectangle(latDeg1 float64, lngDeg1 float64, latDeg2 float64, lngDeg2 float64, minLevel int, maxLevel int, levelMod int, maxCells int) int {
 	rect := s2.RectFromLatLng(s2.LatLngFromDegrees(latDeg1, lngDeg1))

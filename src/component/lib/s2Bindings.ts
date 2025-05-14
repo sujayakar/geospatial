@@ -153,4 +153,64 @@ export class S2Bindings {
     const uint64s = new BigUint64Array(buffer.buffer);
     return [...uint64s];
   }
+
+  coverPolygon(
+    polygon: Point[],
+    minLevel: number,
+    maxLevel: number,
+    levelMod: number,
+    maxCells: number,
+  ): CellID[] {
+    if (polygon.length < 3) {
+      throw new Error("Polygon must have at least 3 vertices");
+    }
+    if (typeof this.exports.coverPolygon !== "function") {
+      // Simple bounding rectangle fallback.
+      let south = polygon[0].latitude;
+      let north = polygon[0].latitude;
+      let west = polygon[0].longitude;
+      let east = polygon[0].longitude;
+      for (const p of polygon) {
+        south = Math.min(south, p.latitude);
+        north = Math.max(north, p.latitude);
+        west = Math.min(west, p.longitude);
+        east = Math.max(east, p.longitude);
+      }
+      return this.coverRectangle(
+        { south, north, west, east },
+        minLevel,
+        maxLevel,
+        levelMod,
+        maxCells,
+      );
+    }
+
+    const numVertices = polygon.length;
+    const ptr = this.exports.polygonVerticesBufferPtr();
+    // Each vertex is two float64 values.
+    const wasmMemory = new Float64Array(this.exports.memory.buffer);
+    // Compute start index (byte offset / 8) for float64 view.
+    const startIndex = (ptr as unknown as number) / 8;
+    for (let i = 0; i < numVertices; i++) {
+      const v = polygon[i];
+      wasmMemory[startIndex + i * 2] = v.latitude;
+      wasmMemory[startIndex + i * 2 + 1] = v.longitude;
+    }
+
+    const len = this.exports.coverPolygon(
+      numVertices,
+      minLevel,
+      maxLevel,
+      levelMod,
+      maxCells,
+    );
+    if (len < 0) {
+      throw new Error("Failed to coverPolygon");
+    }
+    const coverPtr = this.exports.coverRectangleBufferPtr(); // reuse same buffer
+    const coverMemory = new Uint8Array(this.exports.memory.buffer);
+    const buffer = coverMemory.slice(coverPtr + 0, coverPtr + len * 8);
+    const uint64s = new BigUint64Array(buffer.buffer);
+    return [...uint64s];
+  }
 }

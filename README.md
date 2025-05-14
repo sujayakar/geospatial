@@ -284,4 +284,12 @@ npm run dev
 The component definition is in `src/` and reflects what users of the component will install. The example app,
 which is entirely independent, lives in `example/`.
 
+## Polygon requirements
+
+When supplying a polygon shape you must:
+
+1. Provide the vertices **counter-clockwise (CCW)** around the desired interior (right-hand rule). If the vertices are clockwise we automatically invert them on the server, but it's best to send CCW.
+2. Supply at least 3 distinct vertices. The first = last vertex is optional – we close the loop automatically.
+3. The loop must not self-intersect and must sit entirely on one side of the anti-meridian (±180°). If your loop crosses the dateline, split it into two polygons.
+
 <!-- END: Include on https://convex.dev/components -->
