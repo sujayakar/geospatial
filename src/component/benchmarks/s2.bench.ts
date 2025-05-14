@@ -37,3 +37,14 @@ bench("rectangleContains", () => {
 bench("pointDistance", () => {
   s2.pointDistance(pointA, pointB);
 });
+
+const worldRect: Rectangle = {
+  south: -90,
+  west: -180,
+  north: 90,
+  east: 180,
+};
+
+bench("coverRectangle (world, 10k maxCells)", () => {
+  s2.coverRectangle(worldRect, /*minLevel=*/ 0, /*maxLevel=*/ 16, /*levelMod=*/ 1, /*maxCells=*/ 10_000);
+});
