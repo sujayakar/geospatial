@@ -15,10 +15,13 @@ export function encodeTupleKey(
   // Write `0x0D` as the header.
   view.setUint8(0, 0x0d);
 
-  const littleEndian = true;
-  view.setFloat64(1, sortKey, littleEndian);
+  // Use big-endian so that the most-significant byte comes first.  This is
+  // critical for the encoded string to be lexicographically ordered the same
+  // way as the underlying number.
+  const bigEndian = false;
+  view.setFloat64(1, sortKey, bigEndian);
 
-  let sortKeyUint64 = view.getBigUint64(1, littleEndian);
+  let sortKeyUint64 = view.getBigUint64(1, bigEndian);
 
   // Flip all of the bits if the sign bit is set.
   if ((sortKeyUint64 & (1n << 63n)) !== 0n) {
@@ -28,7 +31,7 @@ export function encodeTupleKey(
   else {
     sortKeyUint64 |= 1n << 63n;
   }
-  view.setBigUint64(1, sortKeyUint64, littleEndian);
+  view.setBigUint64(1, sortKeyUint64, bigEndian);
 
   let out = d64.encode(buf);
   out += `:${pointId}`;
@@ -58,8 +61,8 @@ export function decodeTupleKey(key: TupleKey): {
       `Invalid tuple key ${key}: Expected header 0x0D, got ${view.getUint8(0)}`,
     );
   }
-  const littleEndian = true;
-  let encodedUint64 = view.getBigUint64(1, littleEndian);
+  const bigEndian = false;
+  let encodedUint64 = view.getBigUint64(1, bigEndian);
   // If the sign bit was set, just turn it off.
   if ((encodedUint64 & (1n << 63n)) !== 0n) {
     encodedUint64 &= ~(1n << 63n);
@@ -68,8 +71,8 @@ export function decodeTupleKey(key: TupleKey): {
   else {
     encodedUint64 = ~encodedUint64;
   }
-  view.setBigUint64(1, encodedUint64, littleEndian);
-  const sortKey = view.getFloat64(1, littleEndian);
+  view.setBigUint64(1, encodedUint64, bigEndian);
+  const sortKey = view.getFloat64(1, bigEndian);
   return { sortKey, pointId: pointId as Id<"points"> };
 }
 
