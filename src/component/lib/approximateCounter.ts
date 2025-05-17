@@ -19,15 +19,31 @@ export async function increment(
   if (xxHash32(_id + key) % SAMPLING_RATE !== 0) {
     return;
   }
+  // To avoid a write-write race, perform an optimistic insert first and fall
+  // back to a patch if another concurrent insert has already created the row.
+  try {
+    await ctx.db.insert("approximateCounters", { key, count: 1 });
+    return;
+  } catch (err: unknown) {
+    // Assume the insert failed because a row with the same `key` already exists
+    // (Convex throws an Error with a message containing "Duplicate key" for
+    // unique-index violations).  In that case, retry with a patch; otherwise
+    // re-throw.
+    if (!(err instanceof Error) || !err.message.includes("Duplicate")) {
+      throw err;
+    }
+  }
+
+  // The row exists now – increment it atomically.
   const existing = await ctx.db
     .query("approximateCounters")
     .withIndex("key", (q) => q.eq("key", key))
-    .first();
-  if (existing) {
-    await ctx.db.patch(existing._id, { count: existing.count + 1 });
-  } else {
-    await ctx.db.insert("approximateCounters", { key, count: 1 });
+    .unique();
+  if (!existing) {
+    // Another racing decrement deleted it?  Just retry via recursion.
+    return increment(ctx, _id, key);
   }
+  await ctx.db.patch(existing._id, { count: existing.count + 1 });
 }
 
 export async function decrement(
