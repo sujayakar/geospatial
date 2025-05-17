@@ -108,13 +108,4 @@ export abstract class DatabaseRange implements PointSet {
   setPrefetch(prefetch: number): void {
     this.prefetchSize = prefetch;
   }
-
-  protected applyInterval(q: any): any {
-    let withEnd = q;
-    if (this.interval.endExclusive !== undefined) {
-      const bound = encodeBound(this.interval.endExclusive);
-      withEnd = q.lt("tupleKey", bound);
-    }
-    return withEnd;
-  }
 }

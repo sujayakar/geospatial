@@ -79,7 +79,7 @@ export class Intersection implements PointSet {
 
   async current(): Promise<TupleKey | null> {
     await this.initialize();
-    return this.streams.length > 0 ? this.streams[0].current() : null;
+    return this.streams.length > 0 ? await this.streams[0].current() : null;
   }
 
   async advance(): Promise<TupleKey | null> {
@@ -88,7 +88,7 @@ export class Intersection implements PointSet {
       return null;
     }
     await this.streams[0].advance();
-    return this.goToFirstDoc();
+    return await this.goToFirstDoc();
   }
 
   async seek(tuple: TupleKey): Promise<void> {
